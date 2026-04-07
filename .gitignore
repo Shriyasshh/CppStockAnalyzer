@@ -1,0 +1,35 @@
+# CMake build directories
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+Testing/
+Makefile
+
+# Build output directories
+build/
+out/
+bin/
+lib/
+
+# Generated project files
+*.dir/
+*.ninja
+*.ninja_deps
+*.ninja_log
+
+# IDE-specific files (optional, depending on your setup)
+*.swp
+*.swo
+*.user
+*.vcxproj*
+*.xcodeproj/
+*.idea/
+*.vscode/
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.log
+
+*.env
