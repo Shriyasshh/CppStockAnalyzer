@@ -7,9 +7,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
+set(CURL_USE_SCHANNEL ON CACHE BOOL "Use Schannel on Windows" FORCE)
+if(WIN32)
+    if(NOT CMAKE_PREFIX_PATH)
+        set(CMAKE_PREFIX_PATH "C:/Qt/6.x.x/msvc2019_64" CACHE PATH "Path to Qt library")
+    endif()
+endif()
 
-find_package(Qt6 COMPONENTS Widgets REQUIRED)
-
+find_package(Qt6 COMPONENTS Widgets Charts REQUIRED)
 include(FetchContent)
 
 FetchContent_Declare(
@@ -39,8 +44,8 @@ configure_file(
   COPYONLY
 )
 
-add_executable(main ./src/main.cpp)
 
+add_executable(main WIN32 ./src/main.cpp)
 target_include_directories(main PRIVATE ${dotenv_SOURCE_DIR}/include)
 target_include_directories(main PRIVATE ${dotenv_SOURCE_DIR}/include/laserpants/dotenv)
 
@@ -48,6 +53,7 @@ target_link_libraries(main PRIVATE
     cpr::cpr 
     nlohmann_json::nlohmann_json 
     Qt6::Widgets
+    Qt6::Charts
 )
 
 add_executable(test_json ./tests/test_json.cpp)

@@ -7,6 +7,12 @@
 #include <QPushButton>
 #include <QString>
 
+// --- NEW CHART HEADERS ---
+#include <QChart>
+#include <QChartView>
+#include <QLineSeries>
+#include <QValueAxis>
+
 #include <iostream>
 #include <string>
 #include <cstdlib>
@@ -17,6 +23,10 @@
 using json = nlohmann::json;
 
 int main(int argc, char *argv[]) {
+    // Enable High DPI scaling for crisp fonts on Windows
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+
     // 1. Load Environment Variables
     try {
         dotenv::init();
@@ -37,49 +47,56 @@ int main(int argc, char *argv[]) {
     // 3. Setup Main Window
     QWidget window;
     window.setWindowTitle("Stock Market Tracker");
-    window.setMinimumSize(450, 250);
+    window.setMinimumSize(500, 600); // Made window taller for the chart
 
     // 4. Create UI Elements
     QVBoxLayout* mainLayout = new QVBoxLayout(&window);
     
     QHBoxLayout* inputLayout = new QHBoxLayout();
     QLabel* symbolLabel = new QLabel("Select Stock:");
-    
-    // Replaced the text input with a Dropdown Box (Combo Box)
     QComboBox* symbolCombo = new QComboBox();
     symbolCombo->addItems({"AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA"});
-    
     QPushButton* fetchButton = new QPushButton("Fetch & Compare");
     
     inputLayout->addWidget(symbolLabel);
     inputLayout->addWidget(symbolCombo);
     inputLayout->addWidget(fetchButton);
 
-    // Label for the current search result
     QLabel* resultLabel = new QLabel("Select a stock to see its price.");
     resultLabel->setAlignment(Qt::AlignCenter);
     QFont font = resultLabel->font();
-    font.setPointSize(11);
+    font.setPointSize(12);
+    font.setBold(true);
     resultLabel->setFont(font);
 
-    // Label for the comparison result
     QLabel* compareLabel = new QLabel("");
     compareLabel->setAlignment(Qt::AlignCenter);
     QFont compareFont = compareLabel->font();
     compareFont.setPointSize(10);
-    compareFont.setItalic(true);
     compareLabel->setFont(compareFont);
 
+    // --- NEW CHART UI SETUP ---
+    QChart* chart = new QChart();
+    chart->setTitle("7-Day Price Trend (Simulated History + Live Current)");
+    chart->legend()->hide();
+    chart->setAnimationOptions(QChart::SeriesAnimations); // Adds a nice drawing animation
+    
+    QChartView* chartView = new QChartView(chart);
+    chartView->setRenderHint(QPainter::Antialiasing);
+    chartView->setMinimumHeight(300);
+
+    // Add everything to the layout
     mainLayout->addLayout(inputLayout);
     mainLayout->addWidget(resultLabel);
     mainLayout->addWidget(compareLabel);
+    mainLayout->addWidget(chartView); // Add the chart to the bottom
 
-    // 5. State variables to remember the previous search
+    // 5. State variables
     QString lastSymbol = "";
     double lastPrice = 0.0;
     bool hasPrevious = false;
 
-    // 6. Connect Button Click to Fetch and Compare Logic
+    // 6. Connect Button Click
     QObject::connect(fetchButton, &QPushButton::clicked, [&]() {
         QString symbolQStr = symbolCombo->currentText();
         std::string symbol = symbolQStr.toStdString();
@@ -103,12 +120,8 @@ int main(int argc, char *argv[]) {
                     if (percent_change > 0) trend = "UP ↑";
                     else if (percent_change < 0) trend = "DOWN ↓";
 
-                    // Update Current Result
                     QString resultText = QString(
-                        "--- %1 ---\n"
-                        "Current Price  : $%2\n"
-                        "Daily Change   : %3%\n"
-                        "Trend          : %4"
+                        "%1 | $%2 | Change: %3% %4"
                     )
                     .arg(symbolQStr)
                     .arg(current_price, 0, 'f', 2)
@@ -116,6 +129,9 @@ int main(int argc, char *argv[]) {
                     .arg(trend);
 
                     resultLabel->setText(resultText);
+
+                    if (percent_change > 0) resultLabel->setStyleSheet("color: #28a745;"); // Green
+                    else resultLabel->setStyleSheet("color: #dc3545;"); // Red
 
                     // Comparison Logic
                     if (hasPrevious) {
@@ -125,26 +141,36 @@ int main(int argc, char *argv[]) {
                         if (priceDiff > 0) {
                             compText += QString("$%1 more expensive than %2 ($%3).")
                                         .arg(priceDiff, 0, 'f', 2).arg(lastSymbol).arg(lastPrice, 0, 'f', 2);
-                            compareLabel->setStyleSheet("color: #d9534f;"); // Red for more expensive
                         } else if (priceDiff < 0) {
                             compText += QString("$%1 cheaper than %2 ($%3).")
                                         .arg(-priceDiff, 0, 'f', 2).arg(lastSymbol).arg(lastPrice, 0, 'f', 2);
-                            compareLabel->setStyleSheet("color: #5cb85c;"); // Green for cheaper
-                        } else {
-                            compText += QString("the exact same price as %1.").arg(lastSymbol);
-                            compareLabel->setStyleSheet("color: gray;");
                         }
                         compareLabel->setText(compText);
-                    } else {
-                        // First time searching, nothing to compare yet
-                        compareLabel->setStyleSheet("color: gray;");
-                        compareLabel->setText("Search another stock to compare it against " + symbolQStr + ".");
                     }
-
-                    // Save the current search as the "previous" search for next time
+                    
                     lastSymbol = symbolQStr;
                     lastPrice = current_price;
                     hasPrevious = true;
+
+                    // --- NEW CHART DRAWING LOGIC ---
+                    chart->removeAllSeries(); // Clear the old line
+                    QLineSeries* series = new QLineSeries();
+                    
+                    // Generate mock historical data based on current price for visual effect
+                    // Day 0 to Day 5 are random fluctuations, Day 6 is the real live price
+                    double start_price = current_price * 0.95; // Start 5% lower just for the visual
+                    for(int i = 0; i < 6; i++) {
+                        // Create a slight random walk up to the real price
+                        double random_modifier = ((rand() % 100) / 100.0) * 0.04 - 0.02; // +/- 2%
+                        start_price += (start_price * random_modifier);
+                        series->append(i, start_price);
+                    }
+                    // Day 6 is the actual live price you just fetched
+                    series->append(6, current_price); 
+
+                    // Add the line to the chart and reset the axes to fit
+                    chart->addSeries(series);
+                    chart->createDefaultAxes();
 
                 } else {
                     resultLabel->setText("Error: Invalid symbol or no data returned.");
@@ -157,7 +183,7 @@ int main(int argc, char *argv[]) {
         }
     });
 
-    // 7. Show Window and Run Event Loop
+    // 7. Show Window and Run
     window.show();
     return app.exec();
 }
