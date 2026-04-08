@@ -7,14 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
-set(CURL_USE_SCHANNEL ON CACHE BOOL "Use Schannel on Windows" FORCE)
-if(WIN32)
-    if(NOT CMAKE_PREFIX_PATH)
-        set(CMAKE_PREFIX_PATH "C:/Qt/6.x.x/msvc2019_64" CACHE PATH "Path to Qt library")
-    endif()
-endif()
 
+# MSYS2's CMake will find this automatically! No paths needed.
 find_package(Qt6 COMPONENTS Widgets Charts REQUIRED)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -44,8 +40,9 @@ configure_file(
   COPYONLY
 )
 
-
+# WIN32 still hides the black console window
 add_executable(main WIN32 ./src/main.cpp)
+
 target_include_directories(main PRIVATE ${dotenv_SOURCE_DIR}/include)
 target_include_directories(main PRIVATE ${dotenv_SOURCE_DIR}/include/laserpants/dotenv)
 
