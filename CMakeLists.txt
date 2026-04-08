@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.15) 
 project(StockMarketAnalysis CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+find_package(Qt6 COMPONENTS Widgets REQUIRED)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -31,9 +40,15 @@ configure_file(
 )
 
 add_executable(main ./src/main.cpp)
+
 target_include_directories(main PRIVATE ${dotenv_SOURCE_DIR}/include)
 target_include_directories(main PRIVATE ${dotenv_SOURCE_DIR}/include/laserpants/dotenv)
-target_link_libraries(main PRIVATE cpr::cpr nlohmann_json::nlohmann_json)
+
+target_link_libraries(main PRIVATE 
+    cpr::cpr 
+    nlohmann_json::nlohmann_json 
+    Qt6::Widgets
+)
 
 add_executable(test_json ./tests/test_json.cpp)
 target_link_libraries(test_json PRIVATE nlohmann_json::nlohmann_json)
